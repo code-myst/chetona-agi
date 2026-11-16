@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My Blog</title>
+  <style>
+    :root { --bg:#f5f5f7; --card:#fff; --text:#1d1d1f; --muted:#6e6e73; --accent:#2563eb; --border:#e5e5ea; }
+    body.dark { --bg:#121212; --card:#1e1e1e; --text:#f2f2f2; --muted:#a0a0a0; --accent:#60a5fa; --border:#333; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, sans-serif; background:var(--bg); color:var(--text); }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 20px; }
+    header { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+    h1 { margin:0; }
+    input, textarea, button { font: inherit; padding: 10px; border-radius: 8px; border:1px solid var(--border); background:var(--card); color:var(--text); }
+    textarea { width:100%; min-height:120px; resize:vertical; }
+    input { width:100%; }
+    button { cursor:pointer; background:var(--accent); color:#fff; border:none; }
+    button.ghost { background:transparent; color:var(--text); border:1px solid var(--border); }
+    button.danger { background:#dc2626; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px; margin-bottom:14px; }
+    .meta { color:var(--muted); font-size:13px; margin-bottom:8px; }
+    .content { white-space: pre-wrap; }
+    .actions { margin-top:10px; display:flex; gap:8px; }
+    .row { display:flex; gap:8px; margin-bottom:10px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>My Blog</h1>
+    <button class="ghost" id="themeBtn">🌙</button>
+  </header>
+
+  <div class="card">
+    <h3 id="formTitle">নতুন পোস্ট</h3>
+    <input id="title" placeholder="শিরোনাম" style="margin-bottom:8px" />
+    <input id="author" placeholder="লেখকের নাম" style="margin-bottom:8px" />
+    <textarea id="content" placeholder="এখানে লেখো..."></textarea>
+    <div class="actions">
+      <button id="saveBtn">পাবলিশ</button>
+      <button class="ghost" id="cancelBtn" style="display:none">বাতিল</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <input id="search" placeholder="সার্চ করো..." />
+  </div>
+
+  <div id="posts"></div>
+</div>
+
+<script>
+  // লোকালে টেস্ট করার সময় এটা, ডিপ্লয়ের পর Render URL বসাবে
+  const API = "http://localhost:5000";
+
+  const $ = (id) => document.getElementById(id);
+  let editingId = null;
+
+  async function loadPosts(q = "") {
+    const res = await fetch(`${API}/posts?q=${encodeURIComponent(q)}`);
+    const posts = await res.json();
+    const box = $("posts");
+    box.innerHTML = "";
+    if (!posts.length) {
+      box.innerHTML = '<p class="meta">কোনো পোস্ট নেই।</p>';
+      return;
+    }
+    posts.forEach((p) => {
+      const card = document.createElement("div");
+      card.className = "card";
+
+      const h = document.createElement("h2");
+      h.textContent = p.title;
+
+      const meta = document.createElement("div");
+      meta.className = "meta";
+      meta.textContent = `${p.author} • ${new Date(p.createdAt).toLocaleString()}`;
+
+      const c = document.createElement("div");
+      c.className = "content";
+      c.textContent = p.content;
+
+      const actions = document.createElement("div");
+      actions.className = "actions";
+
+      const edit = document.createElement("button");
+      edit.className = "ghost";
+      edit.textContent = "এডিট";
+      edit.onclick = () => startEdit(p);
+
+      const del = document.createElement("button");
+      del.className = "danger";
+      del.textContent = "ডিলিট";
+      del.onclick = () => removePost(p._id);
+
+      actions.append(edit, del);
+      card.append(h, meta, c, actions);
+      box.append(card);
+    });
+  }
+
+  async function savePost() {
+    const body = {
+      title: $("title").value,
+      author: $("author").value || "Anonymous",
+      content: $("content").value,
+    };
+    const url = editingId ? `${API}/posts/${editingId}` : `${API}/posts`;
+    const method = editingId ? "PUT" : "POST";
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      return alert(err.error || "Error");
+    }
+    resetForm();
+    loadPosts($("search").value);
+  }
+
+  function startEdit(p) {
+    editingId = p._id;
+    $("title").value = p.title;
+    $("author").value = p.author;
+    $("content").value = p.content;
+    $("formTitle").textContent = "পোস্ট এডিট";
+    $("saveBtn").textContent = "আপডেট";
+    $("cancelBtn").style.display = "inline-block";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function resetForm() {
+    editingId = null;
+    $("title").value = "";
+    $("author").value = "";
+    $("content").value = "";
+    $("formTitle").textContent = "নতুন পোস্ট";
+    $("saveBtn").textContent = "পাবলিশ";
+    $("cancelBtn").style.display = "none";
+  }
+
+  async function removePost(id) {
+    if (!confirm("সত্যিই ডিলিট করবে?")) return;
+    await fetch(`${API}/posts/${id}`, { method: "DELETE" });
+    loadPosts($("search").value);
+  }
+
+  // ইভেন্ট
+  $("saveBtn").onclick = savePost;
+  $("cancelBtn").onclick = resetForm;
+  $("search").oninput = (e) => loadPosts(e.target.value);
+
+  // ডার্ক মোড
+  if (localStorage.getItem("theme") === "dark") document.body.classList.add("dark");
+  $("themeBtn").onclick = () => {
+    document.body.classList.toggle("dark");
+    localStorage.setItem("theme", document.body.classList.contains("dark") ? "dark" : "light");
+  };
+
+  loadPosts();
+</script>
+</body>
+</html>
