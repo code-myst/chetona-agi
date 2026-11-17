@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>পোস্ট</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="logo" href="index.html">← My Blog</a>
+    <button class="ghost" id="themeBtn">🌙</button>
+  </header>
+  <div class="status" id="status">লোড হচ্ছে...</div>
+  <article id="post"></article>
+</div>
+
+<script type="module">
+  import { $, el, fmtDate, safeImgSrc, cld, ytEmbed } from "./app.js";
+  import { fetchPost } from "./firebase.js";
+
+  function openLightbox(src) {
+    const box = el("div", "lightbox");
+    const im = el("img");
+    im.src = src;
+    box.append(im);
+    box.onclick = () => box.remove();
+    document.body.append(box);
+  }
+
+  async function init() {
+    const id = new URLSearchParams(location.search).get("id");
+    if (!id) { $("status").textContent = "পোস্ট পাওয়া যায়নি।"; return; }
+    try {
+      const p = await fetchPost(id);
+      if (!p) { $("status").textContent = "পোস্ট পাওয়া যায়নি।"; return; }
+      document.title = p.title;
+      $("status").textContent = "";
+      const root = $("post");
+
+      root.append(el("h1", "", p.title));
+      const meta = el("div", "meta", p.author + " • " + fmtDate(p.createdAt));
+      if (p.sourceUrl && /^https?:\/\/\S+$/.test(p.sourceUrl)) {
+        meta.append(document.createTextNode(" • "));
+        const a = el("a", "", "মূল সূত্র");
+        a.href = p.sourceUrl; a.target = "_blank"; a.rel = "noopener noreferrer";
+        meta.append(a);
+      }
+      root.append(meta);
+
+      if (p.tags && p.tags.length) {
+        const chips = el("div", "chips");
+        p.tags.forEach((t) => chips.append(el("span", "chip", "#" + t)));
+        root.append(chips);
+      }
+
+      (p.blocks || []).forEach((b) => {
+        const wrap = el("div", "block");
+        if (b.type === "text") {
+          wrap.append(el("div", "text", b.value));
+        } else if (b.type === "youtube") {
+          wrap.append(ytEmbed(b.value));
+        } else if (b.type === "image") {
+          const src = safeImgSrc(b.value);
+          if (src) {
+            const im = el("img");
+            im.src = cld(src, 1400); im.alt = b.caption || ""; im.loading = "lazy";
+            im.onclick = () => openLightbox(cld(src, 2000));
+            wrap.append(im);
+          }
+        }
+        if (b.caption && b.type !== "text") wrap.append(el("div", "caption", b.caption));
+        root.append(wrap);
+      });
+    } catch (e) {
+      $("status").textContent = "লোড করা যায়নি: " + e.message;
+    }
+  }
+  init();
+</script>
+</body>
+</html>

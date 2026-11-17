@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My Blog</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="logo" href="index.html">My Blog</a>
+    <button class="ghost" id="themeBtn">🌙</button>
+  </header>
+
+  <input id="search" placeholder="সার্চ করো (শিরোনাম, লেখক, ট্যাগ, লেখা)..." />
+  <div class="chips" id="chips"></div>
+  <div class="status" id="status">লোড হচ্ছে...</div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<script type="module">
+  import { $, el, fmtDate, safeImgSrc, summarize } from "./app.js";
+  import { fetchPosts } from "./firebase.js";
+
+  let all = [];
+  let activeTag = "";
+
+  function matches(p, q) {
+    if (activeTag && !(p.tags || []).includes(activeTag)) return false;
+    if (!q) return true;
+    const s = [p.title, p.author, (p.tags || []).join(" "),
+      (p.blocks || []).filter((b) => b.type === "text").map((b) => b.value).join(" ")]
+      .join(" ").toLowerCase();
+    return s.includes(q.toLowerCase());
+  }
+
+  function renderChips() {
+    const tags = [...new Set(all.flatMap((p) => p.tags || []))].sort();
+    const box = $("chips");
+    box.innerHTML = "";
+    tags.forEach((t) => {
+      const c = el("button", "chip" + (t === activeTag ? " on" : ""), "#" + t);
+      c.onclick = () => { activeTag = activeTag === t ? "" : t; renderChips(); render(); };
+      box.append(c);
+    });
+  }
+
+  function render() {
+    const q = $("search").value.trim();
+    const posts = all.filter((p) => matches(p, q));
+    const grid = $("grid");
+    grid.innerHTML = "";
+    $("status").textContent = posts.length ? "" : "কোনো পোস্ট নেই।";
+    posts.forEach((p) => {
+      const s = summarize(p);
+      const a = el("a", "pcard");
+      a.href = "post.html?id=" + encodeURIComponent(p.id);
+      const src = safeImgSrc(s.thumb);
+      if (src) {
+        const im = el("img", "thumb");
+        im.src = src; im.loading = "lazy"; im.alt = "";
+        a.append(im);
+      }
+      const body = el("div", "body");
+      body.append(el("h3", "", p.title));
+      body.append(el("div", "meta", p.author + " • " + fmtDate(p.createdAt)));
+      body.append(el("div", "meta", "📝 " + s.counts.text + "  ▶ " + s.counts.youtube + "  🖼 " + s.counts.image));
+      if (s.excerpt) body.append(el("p", "", s.excerpt));
+      a.append(body);
+      grid.append(a);
+    });
+  }
+
+  $("search").oninput = render;
+
+  fetchPosts()
+    .then((posts) => { all = posts; renderChips(); render(); })
+    .catch((e) => { $("status").textContent = "লোড করা যায়নি: " + e.message; });
+</script>
+</body>
+</html>

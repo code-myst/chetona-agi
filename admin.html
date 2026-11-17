@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>অ্যাডমিন</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="logo" href="index.html">← My Blog</a>
+    <div class="row">
+      <button class="ghost" id="logoutBtn" hidden>লগআউট</button>
+      <button class="ghost" id="themeBtn">🌙</button>
+    </div>
+  </header>
+
+  <div class="card" id="loginBox" hidden>
+    <h3>অ্যাডমিন লগইন</h3>
+    <input id="email" type="email" placeholder="ইমেইল" style="margin-bottom:8px" />
+    <input id="pass" type="password" placeholder="পাসওয়ার্ড" style="margin-bottom:8px" />
+    <button id="loginBtn">ঢুকো</button>
+    <div class="meta" id="loginErr" style="margin-top:8px;color:var(--danger)"></div>
+  </div>
+
+  <div id="app" hidden>
+    <div class="row" style="margin-bottom:14px">
+      <button id="newBtn">+ নতুন পোস্ট</button>
+    </div>
+    <div id="editor" hidden></div>
+    <div class="card">
+      <h3 style="margin-top:0">সব পোস্ট</h3>
+      <div id="list"></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { $, el, fmtDate, safeImgSrc } from "./app.js";
+  import { CLOUDINARY, fetchPosts, fetchPost, createPost, updatePost, deletePost, login, logout, watchAuth } from "./firebase.js";
+
+  let ed = null;
+  const MAX_IMAGES = 5;
+  const MAX_BLOCKS = 30;
+
+  function errMsg(e) {
+    if (e.code === "permission-denied") return "অনুমতি নেই। Firestore Rules-এ অ্যাডমিন ইমেইল ঠিক আছে কিনা দেখো।";
+    if (e.code === "auth/invalid-credential" || e.code === "auth/wrong-password" || e.code === "auth/user-not-found" || e.code === "auth/invalid-email")
+      return "ইমেইল বা পাসওয়ার্ড ভুল";
+    if (e.code === "auth/too-many-requests") return "অনেকবার ভুল হয়েছে, একটু পরে চেষ্টা করো";
+    return e.message || "Error";
+  }
+
+  // ---------- লগইন ----------
+  watchAuth((user) => {
+    if (user) {
+      $("loginBox").hidden = true;
+      $("app").hidden = false;
+      $("logoutBtn").hidden = false;
+      loadList();
+    } else {
+      $("loginBox").hidden = false;
+      $("app").hidden = true;
+      $("logoutBtn").hidden = true;
+      ed = null;
+      $("editor").hidden = true;
+    }
+  });
+
+  $("loginBtn").onclick = async () => {
+    $("loginErr").textContent = "";
+    try {
+      await login($("email").value.trim(), $("pass").value);
+      $("pass").value = "";
+    } catch (e) { $("loginErr").textContent = errMsg(e); }
+  };
+  $("pass").onkeydown = (e) => { if (e.key === "Enter") $("loginBtn").click(); };
+  $("logoutBtn").onclick = () => logout();
+
+  // ---------- তালিকা ----------
+  async function loadList() {
+    const box = $("list");
+    box.textContent = "লোড হচ্ছে...";
+    try {
+      const posts = await fetchPosts();
+      box.innerHTML = "";
+      if (!posts.length) { box.textContent = "কোনো পোস্ট নেই।"; return; }
+      posts.forEach((p) => {
+        const row = el("div", "prow");
+        const info = el("div");
+        const a = el("a", "", p.title);
+        a.href = "post.html?id=" + encodeURIComponent(p.id);
+        a.target = "_blank";
+        info.append(a, el("div", "meta", p.author + " • " + fmtDate(p.createdAt)));
+        const actions = el("div", "row");
+        const eb = el("button", "ghost", "এডিট");
+        eb.onclick = () => editPost(p.id);
+        const db = el("button", "danger", "ডিলিট");
+        db.onclick = () => removePost(p.id, p.title);
+        actions.append(eb, db);
+        row.append(info, actions);
+        box.append(row);
+      });
+    } catch (e) { box.textContent = "লোড করা যায়নি: " + errMsg(e); }
+  }
+
+  async function removePost(id, title) {
+    if (!confirm("“" + title + "” ডিলিট করবে?")) return;
+    try { await deletePost(id); loadList(); } catch (e) { alert(errMsg(e)); }
+  }
+
+  // ---------- এডিটর ----------
+  function newEd() {
+    ed = { id: null, title: "", author: "", sourceUrl: "", tags: "", blocks: [{ type: "text", value: "", caption: "" }] };
+    renderEditor();
+  }
+
+  async function editPost(id) {
+    try {
+      const p = await fetchPost(id);
+      if (!p) return alert("পোস্ট পাওয়া যায়নি");
+      ed = {
+        id: p.id, title: p.title, author: p.author, sourceUrl: p.sourceUrl || "",
+        tags: (p.tags || []).join(", "),
+        blocks: (p.blocks || []).map((b) => ({
+          type: b.type,
+          value: b.type === "youtube" ? "https://youtu.be/" + b.value : b.value || "",
+          caption: b.caption || "",
+        })),
+      };
+      renderEditor();
+      $("editor").scrollIntoView({ behavior: "smooth" });
+    } catch (e) { alert(errMsg(e)); }
+  }
+
+  // ছবি ছোট করে Cloudinary-তে আপলোড
+  async function compress(file) {
+    const bmp = await createImageBitmap(file);
+    const s = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(bmp.width * s));
+    c.height = Math.max(1, Math.round(bmp.height * s));
+    const ctx = c.getContext("2d");
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, c.width, c.height);
+    ctx.drawImage(bmp, 0, 0, c.width, c.height);
+    return new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error("compress failed"))), "image/jpeg", 0.85));
+  }
+
+  async function uploadImage(file) {
+    const blob = await compress(file);
+    const fd = new FormData();
+    fd.append("file", blob, "image.jpg");
+    fd.append("upload_preset", CLOUDINARY.uploadPreset);
+    const res = await fetch("https://api.cloudinary.com/v1_1/" + CLOUDINARY.cloudName + "/image/upload", { method: "POST", body: fd });
+    const data = await res.json();
+    if (!res.ok) throw new Error((data.error && data.error.message) || "আপলোড হয়নি");
+    return data.secure_url;
+  }
+
+  function bind(input, obj, key) {
+    input.value = obj[key] || "";
+    input.oninput = () => { obj[key] = input.value; };
+    return input;
+  }
+  function inp(ph) {
+    const i = document.createElement("input");
+    i.placeholder = ph;
+    return i;
+  }
+
+  function renderEditor() {
+    const box = $("editor");
+    box.innerHTML = "";
+    box.hidden = false;
+    const card = el("div", "card");
+    card.append(el("h3", "", ed.id ? "পোস্ট এডিট" : "নতুন পোস্ট"));
+
+    [["শিরোনাম", "title"], ["লেখকের নাম", "author"], ["মূল সূত্রের লিংক (ঐচ্ছিক)", "sourceUrl"], ["ট্যাগ (কমা দিয়ে আলাদা)", "tags"]].forEach(([ph, k]) => {
+      const i = bind(inp(ph), ed, k);
+      i.style.marginBottom = "8px";
+      card.append(i);
+    });
+
+    const labels = { text: "📝 লেখা", youtube: "▶ ইউটিউব ভিডিও", image: "🖼 ছবি" };
+    ed.blocks.forEach((b, i) => {
+      const w = el("div", "ablock");
+      const head = el("div", "row");
+      const t = el("strong", "grow", labels[b.type]);
+      const up = el("button", "ghost", "↑");
+      up.disabled = i === 0;
+      up.onclick = () => { [ed.blocks[i - 1], ed.blocks[i]] = [ed.blocks[i], ed.blocks[i - 1]]; renderEditor(); };
+      const dn = el("button", "ghost", "↓");
+      dn.disabled = i === ed.blocks.length - 1;
+      dn.onclick = () => { [ed.blocks[i + 1], ed.blocks[i]] = [ed.blocks[i], ed.blocks[i + 1]]; renderEditor(); };
+      const rm = el("button", "danger", "✕");
+      rm.onclick = () => { ed.blocks.splice(i, 1); renderEditor(); };
+      head.append(t, up, dn, rm);
+      w.append(head);
+
+      if (b.type === "text") {
+        const ta = document.createElement("textarea");
+        ta.placeholder = "এখানে লেখো...";
+        bind(ta, b, "value");
+        w.append(ta);
+      } else if (b.type === "youtube") {
+        w.append(bind(inp("YouTube লিংক (যেমন https://youtu.be/xxxxxxxxxxx)"), b, "value"));
+        w.append(bind(inp("ক্যাপশন (ঐচ্ছিক)"), b, "caption"));
+      } else {
+        const src = safeImgSrc(b.value);
+        if (src && !b.uploading) {
+          const im = el("img");
+          im.src = src;
+          im.style.cssText = "max-width:220px;border-radius:8px;display:block";
+          w.append(im);
+        }
+        if (b.uploading) {
+          w.append(el("div", "meta", "আপলোড হচ্ছে..."));
+        } else {
+          const f = document.createElement("input");
+          f.type = "file"; f.accept = "image/*";
+          f.onchange = async () => {
+            if (!f.files[0]) return;
+            b.uploading = true;
+            renderEditor();
+            try {
+              b.value = await uploadImage(f.files[0]);
+            } catch (e) { alert("ছবি আপলোড হয়নি: " + e.message); }
+            b.uploading = false;
+            renderEditor();
+          };
+          w.append(f);
+          const u = inp("অথবা ছবির লিংক (https://...)");
+          u.value = b.value || "";
+          u.oninput = () => { b.value = u.value; };
+          w.append(u);
+        }
+        w.append(bind(inp("ক্যাপশন (ঐচ্ছিক)"), b, "caption"));
+      }
+      card.append(w);
+    });
+
+    const imgCount = ed.blocks.filter((b) => b.type === "image").length;
+    const add = el("div", "row");
+    const mk = (label, type, disabled) => {
+      const x = el("button", "ghost", label);
+      x.disabled = !!disabled || ed.blocks.length >= MAX_BLOCKS;
+      x.onclick = () => { ed.blocks.push({ type, value: "", caption: "" }); renderEditor(); };
+      return x;
+    };
+    add.append(mk("+ লেখা", "text"), mk("+ ভিডিও", "youtube"), mk("+ ছবি", "image", imgCount >= MAX_IMAGES));
+    add.append(el("span", "meta", "ছবি " + imgCount + "/" + MAX_IMAGES));
+    card.append(add);
+
+    const act = el("div", "row");
+    act.style.marginTop = "14px";
+    const save = el("button", "", ed.id ? "আপডেট" : "পাবলিশ");
+    save.disabled = ed.blocks.some((b) => b.uploading);
+    save.onclick = () => savePost(save);
+    const cancel = el("button", "ghost", "বাতিল");
+    cancel.onclick = () => { ed = null; box.hidden = true; };
+    act.append(save, cancel);
+    card.append(act);
+    box.append(card);
+  }
+
+  // ---------- যাচাই ও সেভ ----------
+  const YT = /(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/|live\/))([\w-]{11})/;
+  function ytId(s) {
+    s = String(s || "").trim();
+    if (/^[\w-]{11}$/.test(s)) return s;
+    const m = s.match(YT);
+    return m ? m[1] : null;
+  }
+
+  function buildData() {
+    const title = ed.title.trim();
+    if (!title) throw new Error("শিরোনাম দিন");
+    if (!ed.blocks.length) throw new Error("অন্তত একটা অংশ দিন");
+    let images = 0;
+    const blocks = ed.blocks.map((b) => {
+      const caption = (b.caption || "").trim().slice(0, 300);
+      if (b.type === "text") {
+        const v = b.value.trim();
+        if (!v) throw new Error("খালি লেখা ব্লক আছে");
+        if (v.length > 20000) throw new Error("একটা লেখা ব্লক ২০০০০ অক্ষরের বেশি হতে পারবে না");
+        return { type: "text", value: v, caption: "" };
+      }
+      if (b.type === "youtube") {
+        const id = ytId(b.value);
+        if (!id) throw new Error("YouTube লিংক ঠিক নয়");
+        return { type: "youtube", value: id, caption };
+      }
+      images += 1;
+      if (images > MAX_IMAGES) throw new Error("সর্বোচ্চ ৫টা ছবি");
+      const url = (b.value || "").trim();
+      if (!/^https:\/\/\S+$/.test(url)) throw new Error("ছবি আপলোড করো বা https লিংক দাও");
+      return { type: "image", value: url, caption };
+    });
+    const src = ed.sourceUrl.trim();
+    if (src && !/^https?:\/\/\S+$/.test(src)) throw new Error("মূল সূত্রের লিংক ঠিক নয়");
+    const tags = [...new Set(ed.tags.split(",").map((x) => x.trim().toLowerCase().slice(0, 30)).filter(Boolean))].slice(0, 10);
+    const data = { title: title.slice(0, 200), author: (ed.author.trim() || "Anonymous").slice(0, 100), sourceUrl: src, tags, blocks };
+    if (JSON.stringify(data).length > 900000) throw new Error("পোস্ট অনেক বড় হয়ে গেছে");
+    return data;
+  }
+
+  async function savePost(btn) {
+    let data;
+    try { data = buildData(); } catch (e) { return alert(e.message); }
+    btn.disabled = true;
+    try {
+      if (ed.id) await updatePost(ed.id, data);
+      else await createPost(data);
+      ed = null;
+      $("editor").hidden = true;
+      loadList();
+    } catch (e) {
+      alert(errMsg(e));
+      btn.disabled = false;
+    }
+  }
+
+  $("newBtn").onclick = newEd;
+</script>
+</body>
+</html>
