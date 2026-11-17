@@ -3,36 +3,172 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>My Blog</title>
+  <title>চেতনা অগ্নিশঙ্খ — Powered by SSC27</title>
+  <meta name="description" content="চেতনা অগ্নিশঙ্খ: কৃত্রিম বুদ্ধিমত্তা ও আগামীর ভাবনার ম্যাগাজিন। Powered by SSC27" />
+  <script>if(localStorage.getItem("theme")!=="light")document.documentElement.classList.add("dark")</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+<!-- লোগো (একবার ডিফাইন, বারবার ব্যবহার) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="mark" viewBox="0 0 48 48">
+    <defs>
+      <linearGradient id="gA" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#22d3ee"/><stop offset=".55" stop-color="#a78bfa"/><stop offset="1" stop-color="#fb7185"/>
+      </linearGradient>
+      <linearGradient id="gF" x1="0" y1="1" x2="0" y2="0">
+        <stop offset="0" stop-color="#f97316"/><stop offset="1" stop-color="#fde047"/>
+      </linearGradient>
+    </defs>
+    <circle cx="24" cy="24" r="21.5" fill="none" stroke="url(#gA)" stroke-width="2" stroke-dasharray="3 5" stroke-linecap="round"/>
+    <path d="M24 8c1.6 5.6 8.5 8.6 8.5 16.2A8.5 8.5 0 0 1 24 33a8.5 8.5 0 0 1-8.5-8.8c0-3.2 1.6-5.2 3.2-7.3.5 1.9 1.6 3.2 3.2 3.7C21.2 15 22.4 11.4 24 8z" fill="url(#gF)"/>
+    <circle cx="24" cy="26" r="3.2" fill="#0b1020"/><circle cx="24" cy="26" r="1.5" fill="url(#gA)"/>
+    <path d="M13 38h7M28 38h7M24 33v8" stroke="url(#gA)" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+  </symbol>
+</svg>
+
 <div class="wrap">
   <header class="top">
-    <a class="logo" href="index.html">My Blog</a>
-    <button class="ghost" id="themeBtn">🌙</button>
+    <a class="logo" href="index.html"><svg class="mark"><use href="#mark"/></svg><span>চেতনা অগ্নিশঙ্খ</span></a>
+    <button class="ghost" id="themeBtn" title="থিম বদলাও">☀️</button>
   </header>
 
-  <input id="search" placeholder="সার্চ করো (শিরোনাম, লেখক, ট্যাগ, লেখা)..." />
+  <section class="hero">
+    <svg class="mark"><use href="#mark"/></svg>
+    <div class="eyebrow mono">AI • MAGAZINE • SSC27</div>
+    <h1 class="brand-name">চেতনা অগ্নিশঙ্খ</h1>
+    <div class="tagline"><span id="typed"></span><span class="cursor"></span></div>
+    <div class="ssc mono"><i></i><span>Powered by</span> <b>SSC27</b></div>
+  </section>
+
+  <section class="stats">
+    <div class="glass stat"><b class="mono" id="stPosts">০</b><span>পোস্ট</span></div>
+    <div class="glass stat"><b class="mono" id="stAuthors">০</b><span>লেখক</span></div>
+    <div class="glass stat"><b class="mono" id="stVideos">০</b><span>ভিডিও</span></div>
+    <div class="glass stat"><b class="mono" id="stImages">০</b><span>ছবি</span></div>
+  </section>
+
+  <section class="glass toolbar">
+    <div class="searchbox">
+      <span class="ico">⌕</span>
+      <input id="search" placeholder="শিরোনাম, লেখক, ট্যাগ বা লেখা খোঁজো…" autocomplete="off" />
+      <kbd>/</kbd>
+    </div>
+    <div class="seg" id="typeSeg">
+      <button data-type="all" class="on">সব</button>
+      <button data-type="text">📝</button>
+      <button data-type="youtube">▶</button>
+      <button data-type="image">🖼</button>
+    </div>
+    <select id="author"><option value="">সব লেখক</option></select>
+    <select id="sort">
+      <option value="new">নতুন আগে</option>
+      <option value="old">পুরোনো আগে</option>
+    </select>
+    <div class="seg" id="viewSeg">
+      <button data-view="grid" title="গ্রিড">▦</button>
+      <button data-view="list" title="লিস্ট">☰</button>
+    </div>
+    <button class="ghost" id="savedBtn">♡ সেভ করা</button>
+    <button class="ghost" id="randBtn">🎲 র‍্যান্ডম</button>
+  </section>
+
   <div class="chips" id="chips"></div>
-  <div class="status" id="status">লোড হচ্ছে...</div>
-  <div class="grid" id="grid"></div>
+  <div class="countline"><span id="count"></span><button class="linkbtn" id="resetBtn" hidden>ফিল্টার মুছো ✕</button></div>
+
+  <div id="featured"></div>
+  <div class="status" id="status"></div>
+  <div class="grid grid-view" id="grid"></div>
+  <div class="morewrap"><button class="ghost" id="moreBtn" hidden>আরও দেখাও</button></div>
 </div>
 
+<footer class="foot">
+  <div>© চেতনা অগ্নিশঙ্খ</div>
+  <div class="mono" style="margin-top:4px">Powered by <b>SSC27</b></div>
+</footer>
+
 <script type="module">
-  import { $, el, fmtDate, safeImgSrc, summarize } from "./app.js";
+  import { $, el, fmtDate, safeImgSrc, summarize, startBackground } from "./app.js";
   import { fetchPosts } from "./firebase.js";
 
-  let all = [];
-  let activeTag = "";
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const BN = (n) => Number(n).toLocaleString("bn-BD");
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const PAGE = 12;
 
-  function matches(p, q) {
-    if (activeTag && !(p.tags || []).includes(activeTag)) return false;
-    if (!q) return true;
-    const s = [p.title, p.author, (p.tags || []).join(" "),
-      (p.blocks || []).filter((b) => b.type === "text").map((b) => b.value).join(" ")]
-      .join(" ").toLowerCase();
-    return s.includes(q.toLowerCase());
+  startBackground();
+
+  // ---------- ট্যাগলাইন টাইপিং ----------
+  const LINES = [
+    "কৃত্রিম বুদ্ধিমত্তা ও আগামীর ভাবনার ম্যাগাজিন",
+    "লেখা · ভিডিও · ছবি — সব এক জায়গায়",
+    "চেতনায় আগুন, ভবিষ্যতে আলো",
+  ];
+  function graphemes(s) {
+    try { return [...new Intl.Segmenter("bn", { granularity: "grapheme" }).segment(s)].map((x) => x.segment); }
+    catch (e) { return Array.from(s); }
+  }
+  async function typer() {
+    const node = $("typed");
+    if (reduced) { node.textContent = LINES[0]; return; }
+    let i = 0;
+    while (true) {
+      const g = graphemes(LINES[i % LINES.length]);
+      for (let k = 1; k <= g.length; k++) { node.textContent = g.slice(0, k).join(""); await sleep(55); }
+      await sleep(1900);
+      for (let k = g.length; k >= 0; k--) { node.textContent = g.slice(0, k).join(""); await sleep(22); }
+      await sleep(300);
+      i++;
+    }
+  }
+  typer();
+
+  // ---------- অবস্থা ----------
+  let all = [];
+  let activeTag = "", type = "all", author = "", sort = "new", onlySaved = false, shown = PAGE;
+  let view = localStorage.getItem("view") === "list" ? "list" : "grid";
+  let saved = new Set();
+  try { saved = new Set(JSON.parse(localStorage.getItem("saved") || "[]")); } catch (e) {}
+  const persistSaved = () => { try { localStorage.setItem("saved", JSON.stringify([...saved])); } catch (e) {} };
+
+  const ts = (p) => (p.createdAt && p.createdAt.toMillis ? p.createdAt.toMillis() : 0);
+
+  function readTime(p) {
+    const words = (p.blocks || []).filter((b) => b.type === "text")
+      .map((b) => b.value.trim().split(/\s+/).length).reduce((a, b) => a + b, 0);
+    return words ? Math.max(1, Math.ceil(words / 180)) : 0;
+  }
+
+  function countUp(node, to) {
+    if (reduced) { node.textContent = BN(to); return; }
+    const t0 = performance.now(), d = 900;
+    requestAnimationFrame(function f(t) {
+      const k = Math.min(1, (t - t0) / d);
+      node.textContent = BN(Math.round(to * (1 - Math.pow(1 - k, 3))));
+      if (k < 1) requestAnimationFrame(f);
+    });
+  }
+
+  function renderStats() {
+    let v = 0, im = 0;
+    all.forEach((p) => { const s = summarize(p); v += s.counts.youtube; im += s.counts.image; });
+    countUp($("stPosts"), all.length);
+    countUp($("stAuthors"), new Set(all.map((p) => p.author)).size);
+    countUp($("stVideos"), v);
+    countUp($("stImages"), im);
+  }
+
+  function renderAuthors() {
+    const sel = $("author");
+    const authors = [...new Set(all.map((p) => p.author).filter(Boolean))].sort((a, b) => a.localeCompare(b, "bn"));
+    sel.innerHTML = "";
+    const first = el("option", "", "সব লেখক"); first.value = "";
+    sel.append(first);
+    authors.forEach((a) => { const o = el("option", "", a); o.value = a; sel.append(o); });
+    sel.value = author;
   }
 
   function renderChips() {
@@ -41,42 +177,178 @@
     box.innerHTML = "";
     tags.forEach((t) => {
       const c = el("button", "chip" + (t === activeTag ? " on" : ""), "#" + t);
-      c.onclick = () => { activeTag = activeTag === t ? "" : t; renderChips(); render(); };
+      c.style.cssText = "cursor:pointer;box-shadow:none";
+      c.onclick = () => { activeTag = activeTag === t ? "" : t; shown = PAGE; renderChips(); render(); };
       box.append(c);
     });
   }
 
-  function render() {
-    const q = $("search").value.trim();
-    const posts = all.filter((p) => matches(p, q));
-    const grid = $("grid");
-    grid.innerHTML = "";
-    $("status").textContent = posts.length ? "" : "কোনো পোস্ট নেই।";
-    posts.forEach((p) => {
-      const s = summarize(p);
-      const a = el("a", "pcard");
-      a.href = "post.html?id=" + encodeURIComponent(p.id);
-      const src = safeImgSrc(s.thumb);
-      if (src) {
-        const im = el("img", "thumb");
-        im.src = src; im.loading = "lazy"; im.alt = "";
-        a.append(im);
+  // ---------- ফিল্টার ----------
+  function list() {
+    const q = $("search").value.trim().toLowerCase();
+    const r = all.filter((p) => {
+      if (activeTag && !(p.tags || []).includes(activeTag)) return false;
+      if (author && p.author !== author) return false;
+      if (onlySaved && !saved.has(p.id)) return false;
+      if (type !== "all" && !(p.blocks || []).some((b) => b.type === type)) return false;
+      if (q) {
+        const s = [p.title, p.author, (p.tags || []).join(" "),
+          (p.blocks || []).filter((b) => b.type === "text").map((b) => b.value).join(" ")].join(" ").toLowerCase();
+        if (!s.includes(q)) return false;
       }
-      const body = el("div", "body");
-      body.append(el("h3", "", p.title));
-      body.append(el("div", "meta", p.author + " • " + fmtDate(p.createdAt)));
-      body.append(el("div", "meta", "📝 " + s.counts.text + "  ▶ " + s.counts.youtube + "  🖼 " + s.counts.image));
-      if (s.excerpt) body.append(el("p", "", s.excerpt));
-      a.append(body);
-      grid.append(a);
+      return true;
     });
+    r.sort((a, b) => (sort === "new" ? ts(b) - ts(a) : ts(a) - ts(b)));
+    return r;
   }
 
-  $("search").oninput = render;
+  // ---------- কার্ড ----------
+  function thumbBlock(s) {
+    const wrap = el("div", "thumb-wrap");
+    const src = safeImgSrc(s.thumb);
+    if (src) {
+      const im = el("img", "thumb");
+      im.src = src; im.loading = "lazy"; im.alt = "";
+      wrap.append(im);
+      if (src.includes("img.youtube.com")) {
+        const pl = el("div", "play");
+        pl.append(el("span", "", "▶"));
+        wrap.append(pl);
+      }
+    } else {
+      wrap.append(el("div", "thumb ph", "✦"));
+    }
+    return wrap;
+  }
 
-  fetchPosts()
-    .then((posts) => { all = posts; renderChips(); render(); })
-    .catch((e) => { $("status").textContent = "লোড করা যায়নি: " + e.message; });
+  function pills(p, s) {
+    const box = el("div", "pills");
+    if (s.counts.text) box.append(el("span", "pill", "📝 " + BN(s.counts.text)));
+    if (s.counts.youtube) box.append(el("span", "pill", "▶ " + BN(s.counts.youtube)));
+    if (s.counts.image) box.append(el("span", "pill", "🖼 " + BN(s.counts.image)));
+    const rt = readTime(p);
+    if (rt) box.append(el("span", "pill", "⏱ " + BN(rt) + " মিনিট"));
+    return box;
+  }
+
+  function bmButton(p) {
+    const b = el("button", "bm" + (saved.has(p.id) ? " on" : ""), saved.has(p.id) ? "♥" : "♡");
+    b.title = "সেভ করো";
+    b.onclick = (e) => {
+      e.preventDefault(); e.stopPropagation();
+      if (saved.has(p.id)) saved.delete(p.id); else saved.add(p.id);
+      persistSaved();
+      if (onlySaved) render();
+      else { b.textContent = saved.has(p.id) ? "♥" : "♡"; b.classList.toggle("on", saved.has(p.id)); }
+      updateSavedBtn();
+    };
+    return b;
+  }
+
+  function makeCard(p, featured) {
+    const s = summarize(p);
+    const card = el("div", "pcard" + (featured ? " featured" : ""));
+    const a = el("a", "pc-link");
+    a.href = "post.html?id=" + encodeURIComponent(p.id);
+    a.append(thumbBlock(s));
+    const body = el("div", "body");
+    if (featured) body.append(el("span", "tag-new mono", "LATEST"));
+    body.append(el(featured ? "h2" : "h3", "", p.title));
+    body.append(el("div", "meta", p.author + " • " + fmtDate(p.createdAt)));
+    body.append(pills(p, s));
+    if (s.excerpt) body.append(el("p", "", s.excerpt));
+    if (featured) body.append(el("div", "cta", "পড়ো →"));
+    a.append(body);
+    card.append(a, bmButton(p));
+    return card;
+  }
+
+  // ---------- রেন্ডার ----------
+  function render() {
+    const r = list();
+    const q = $("search").value.trim();
+    const isDefault = !q && !activeTag && type === "all" && !author && !onlySaved && sort === "new";
+
+    const grid = $("grid"), feat = $("featured");
+    grid.className = "grid " + view;
+    grid.innerHTML = ""; feat.innerHTML = "";
+
+    let rest = r;
+    if (isDefault && r.length > 2) { feat.append(makeCard(r[0], true)); rest = r.slice(1); }
+
+    rest.slice(0, shown).forEach((p) => grid.append(makeCard(p, false)));
+
+    $("count").textContent = r.length ? BN(r.length) + "টি পোস্ট" : "";
+    $("status").textContent = r.length ? "" : (onlySaved ? "এখনো কিছু সেভ করোনি।" : "কোনো পোস্ট মেলেনি।");
+    const remaining = rest.length - shown;
+    $("moreBtn").hidden = remaining <= 0;
+    $("moreBtn").textContent = "আরও দেখাও (" + BN(Math.max(0, remaining)) + ")";
+    $("resetBtn").hidden = isDefault;
+
+    document.querySelectorAll("#typeSeg button").forEach((b) => b.classList.toggle("on", b.dataset.type === type));
+    document.querySelectorAll("#viewSeg button").forEach((b) => b.classList.toggle("on", b.dataset.view === view));
+    $("savedBtn").classList.toggle("on", onlySaved);
+    updateSavedBtn();
+  }
+
+  function updateSavedBtn() {
+    $("savedBtn").textContent = (onlySaved ? "♥" : "♡") + " সেভ করা" + (saved.size ? " (" + BN(saved.size) + ")" : "");
+  }
+
+  function skeleton() {
+    const grid = $("grid");
+    grid.className = "grid grid-view";
+    grid.innerHTML = "";
+    for (let i = 0; i < 6; i++) grid.append(el("div", "sk"));
+  }
+
+  // ---------- ইভেন্ট ----------
+  $("search").oninput = () => { shown = PAGE; render(); };
+  $("typeSeg").onclick = (e) => { const b = e.target.closest("button"); if (!b) return; type = b.dataset.type; shown = PAGE; render(); };
+  $("viewSeg").onclick = (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    view = b.dataset.view;
+    try { localStorage.setItem("view", view); } catch (er) {}
+    render();
+  };
+  $("author").onchange = (e) => { author = e.target.value; shown = PAGE; render(); };
+  $("sort").onchange = (e) => { sort = e.target.value; shown = PAGE; render(); };
+  $("savedBtn").onclick = () => { onlySaved = !onlySaved; shown = PAGE; render(); };
+  $("moreBtn").onclick = () => { shown += PAGE; render(); };
+  $("randBtn").onclick = () => {
+    const pool = list().length ? list() : all;
+    if (!pool.length) return;
+    const p = pool[Math.floor(Math.random() * pool.length)];
+    location.href = "post.html?id=" + encodeURIComponent(p.id);
+  };
+  $("resetBtn").onclick = () => {
+    $("search").value = ""; activeTag = ""; type = "all"; author = ""; sort = "new"; onlySaved = false; shown = PAGE;
+    $("author").value = ""; $("sort").value = "new";
+    renderChips(); render();
+  };
+  document.addEventListener("keydown", (e) => {
+    const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+    if (e.key === "/" && !typing) { e.preventDefault(); $("search").focus(); }
+    if (e.key === "Escape" && document.activeElement === $("search")) { $("search").value = ""; $("search").blur(); shown = PAGE; render(); }
+  });
+
+  // ---------- শুরু ----------
+  async function init() {
+    $("status").textContent = "";
+    skeleton();
+    try {
+      all = await fetchPosts();
+      renderStats(); renderAuthors(); renderChips(); render();
+    } catch (e) {
+      $("grid").innerHTML = "";
+      $("status").textContent = "লোড করা যায়নি: " + e.message;
+      const retry = el("button", "ghost", "আবার চেষ্টা করো");
+      retry.style.marginLeft = "10px";
+      retry.onclick = init;
+      $("status").append(retry);
+    }
+  }
+  init();
 </script>
 </body>
 </html>

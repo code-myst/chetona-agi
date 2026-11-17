@@ -3,18 +3,27 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>পোস্ট</title>
+  <title>পোস্ট — চেতনা অগ্নিশঙ্খ</title>
+  <script>if(localStorage.getItem("theme")!=="light")document.documentElement.classList.add("dark")</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
 <div class="wrap">
   <header class="top">
-    <a class="logo" href="index.html">← My Blog</a>
+    <a class="logo" href="index.html">← চেতনা অগ্নিশঙ্খ</a>
     <button class="ghost" id="themeBtn">🌙</button>
   </header>
   <div class="status" id="status">লোড হচ্ছে...</div>
   <article id="post"></article>
 </div>
+
+<footer class="foot">
+  <div>© চেতনা অগ্নিশঙ্খ</div>
+  <div class="mono" style="margin-top:4px">Powered by <b>SSC27</b></div>
+</footer>
 
 <script type="module">
   import { $, el, fmtDate, safeImgSrc, cld, ytEmbed } from "./app.js";
